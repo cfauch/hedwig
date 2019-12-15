@@ -137,4 +137,51 @@ public class RequestTest {
         Assert.assertEquals(0, buff.remaining());
     }
 
+    @Test
+    public void testReadNominal() throws UnknownHostException, UnsupportedEncodingException {
+        final Request req = Request.read("fileName", "octet", InetAddress.getByName("localhost"), 65535);
+        final DatagramPacket packet = req.build();
+        Assert.assertEquals(packet.getPort(), req.getPort());
+        Assert.assertEquals(packet.getAddress(), req.getHost());
+        final byte[] content = packet.getData();
+        Assert.assertEquals(packet.getLength(), content.length);
+        final ByteBuffer buff = ByteBuffer.wrap(content);
+        Assert.assertEquals(EOperation.READ.getCode(), buff.getShort());
+        final byte[] dst = new byte[9];
+        buff.get(dst, 0, dst.length);
+        Assert.assertEquals("fileName\0", new String(dst, "US-ASCII"));
+        final byte[] mode = new byte[6];
+        buff.get(mode, 0, mode.length);
+        Assert.assertEquals("octet\0", new String(mode, "US-ASCII"));
+        Assert.assertEquals(0, buff.remaining());
+    }
+    
+    @Test
+    public void testReadWithOptions() throws UnknownHostException, UnsupportedEncodingException {
+        final Request req = Request.read("fileName", "octet", InetAddress.getByName("localhost"), 65535,
+                Option.blksize(1024), Option.timeout(10));
+        final DatagramPacket packet = req.build();
+        Assert.assertEquals(packet.getPort(), req.getPort());
+        Assert.assertEquals(packet.getAddress(), req.getHost());
+        final byte[] content = packet.getData();
+        Assert.assertEquals(packet.getLength(), content.length);
+        final ByteBuffer buff = ByteBuffer.wrap(content);
+        Assert.assertEquals(1, buff.getShort());
+        final byte[] dst = new byte[9];
+        buff.get(dst, 0, dst.length);
+        Assert.assertEquals("fileName\0", new String(dst, "US-ASCII"));
+        final byte[] mode = new byte[6];
+        buff.get(mode, 0, mode.length);
+        Assert.assertEquals("octet\0", new String(mode, "US-ASCII"));
+        final Option blksize = Option.decode(buff);
+        final Option timeout = Option.decode(buff);
+        Assert.assertNotNull(blksize);
+        Assert.assertEquals("blksize", blksize.getLabel());
+        Assert.assertEquals(1024, blksize.getValue());
+        Assert.assertNotNull(timeout);
+        Assert.assertEquals("timeout", timeout.getLabel());
+        Assert.assertEquals(10, timeout.getValue());
+        Assert.assertEquals(0, buff.remaining());
+    }
+    
 }

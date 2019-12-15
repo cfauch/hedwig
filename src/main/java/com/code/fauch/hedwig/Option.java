@@ -144,5 +144,10 @@ public final class Option {
         }
         return null;
     }
+
+    @Override
+    public String toString() {
+        return "Option [label=" + label + ", value=" + value + "]";
+    }
     
 }

@@ -149,7 +149,6 @@ public final class Response extends AbsPacket {
         byte[] content = Arrays.copyOf(Objects.requireNonNull(packet, "missing packet").getData(), packet.getLength());
         final ByteBuffer buffer = ByteBuffer.wrap(content);
         final EOperation op = EOperation.from(buffer.getShort());
-        short block = 0;
         if (op == EOperation.ERROR) {
             throw TFTPException.from(buffer);
         } if (op == EOperation.OACK) {
@@ -161,13 +160,21 @@ public final class Response extends AbsPacket {
             }
             return new Response(
                     op, 
-                    Short.toUnsignedInt(block), 
+                    0, 
                     new byte[0],
                     packet.getAddress(), 
                     packet.getPort(), 
                     opts);
+        } if (op == EOperation.ACK) {
+            return new Response(
+                    op, 
+                    Short.toUnsignedInt(buffer.getShort()), 
+                    new byte[0],
+                    packet.getAddress(), 
+                    packet.getPort(), 
+                    Collections.emptyMap());
         } else {
-            block = buffer.getShort();
+            final short block = buffer.getShort();
             byte[] data = new byte[buffer.remaining()];
             buffer.get(data);
             return new Response(
@@ -243,6 +250,11 @@ public final class Response extends AbsPacket {
             buffer.put(opts);
             return buffer.array();
         }
+    }
+
+    @Override
+    public String toString() {
+        return "Response [op=" + getOperation() + ", block=" + block + ", data=" + Arrays.toString(data) + ", options=" + options + "]";
     }
 
 }

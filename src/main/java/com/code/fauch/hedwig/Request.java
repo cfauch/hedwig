@@ -18,6 +18,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 
 /**
  * READ/WRITE TFTP request.
@@ -75,6 +76,21 @@ final class Request extends AbsPacket {
         return new Request(EOperation.WRITE, fileName, mode, host, port, opts);
     }
     
+    /**
+     * Builds and returns a new request to read a remote file.
+     * 
+     * @param fileName the name of the remote file to read
+     * @param mode the transfert mode: "netascii", "octet", "mail"
+     * @param host the destination host name
+     * @param port the destination port
+     * @param opts the request options (not null)
+     * @return the corresponding READ request
+     */
+    public static Request read(final String fileName, final String mode, final InetAddress host, final int port,
+            final Option... opts) {
+        return new Request(EOperation.READ, fileName, mode, host, port, opts);
+    }
+    
     @Override
     byte[] encode() throws UnsupportedEncodingException {
         final byte[] modeEnc = (this.mode + "\0").getBytes("US-ASCII");
@@ -101,6 +117,11 @@ final class Request extends AbsPacket {
             out.write(buff, 0, buff.length);
         }
         return out.toByteArray();
+    }
+
+    @Override
+    public String toString() {
+        return "Request [fileName=" + fileName + ", mode=" + mode + ", options=" + Arrays.toString(options) + "]";
     }
     
 }

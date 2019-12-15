@@ -16,6 +16,7 @@ package com.code.fauch.hedwig;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -62,7 +63,7 @@ public final class TFTP {
      * @throws IOException
      * @throws TFTPException
      */
-    public void write(final InetAddress host, final int port, final InputStream input, final String fileName, 
+    public void put(final InetAddress host, final int port, final InputStream input, final String fileName, 
             final String mode, final Option... options) throws UnsupportedEncodingException, IOException, TFTPException {
         final DatagramPacket rcvpacket = new DatagramPacket(new byte[DATA_SIZE + 4], DATA_SIZE + 4);
         send(Request.write(fileName, mode, host, port, options));
@@ -72,11 +73,11 @@ public final class TFTP {
         final Option blksize = resp.getBlksize();
         final byte[] writeBuff = new byte[blksize == null ? DATA_SIZE : (int)blksize.getValue()];
         boolean goOn = true;
-        int block = 0; // 0 to 65535
+        int block = resp.getBlock(); // 1 to 65535 except for first ACK of WRITE request or OACK
         while (goOn) {
             if (block == resp.getBlock()) { // Ack the current block
                 if (goOn) { //Sending next data block
-                    block = block >= 65535 ? 0 : (block + 1);
+                    block = block >= 65535 ? 1 : (block + 1);
                     final int bytesRead = read(input, writeBuff);
                     if (bytesRead < writeBuff.length) {
                         goOn = false;
@@ -86,6 +87,35 @@ public final class TFTP {
             }
             //Waiting for response
             resp = rcv(rcvpacket);
+        }
+    }
+    
+    public void get(final InetAddress host, final int port, final OutputStream output, final String fileName, 
+            final String mode, final Option... options) throws UnsupportedEncodingException, IOException, TFTPException {
+        DatagramPacket rcvpacket = new DatagramPacket(new byte[DATA_SIZE + 4], DATA_SIZE + 4);
+        send(Request.read(fileName, mode, host, port, options));
+        Response resp = rcv(rcvpacket);
+        final InetAddress host2Use = resp.getHost();
+        final int port2Use = resp.getPort();
+        final Option blksize = resp.getBlksize();
+        final int realBlksize = (blksize == null ? DATA_SIZE : (int)blksize.getValue()); 
+        rcvpacket = new DatagramPacket(new byte[realBlksize + 4], realBlksize + 4);
+        boolean goOn = true;
+        int block = resp.getBlock(); // 1 to 65535 except for OACK
+        while (goOn) {
+            if (block == resp.getBlock()) { // Ack the current block
+                if (resp.getOperation() == EOperation.DATA) {
+                    output.write(resp.getData());
+                    if (resp.getData().length < realBlksize) {
+                        goOn = false;
+                    }
+                }
+                send(Response.ack(block, host2Use, port2Use));
+                block = block >= 65535 ? 1 : (block + 1);
+            }
+            if (goOn) {
+                resp = rcv(rcvpacket); //Waiting for response
+            }
         }
     }
     

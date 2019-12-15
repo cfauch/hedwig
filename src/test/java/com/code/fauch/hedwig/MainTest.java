@@ -16,6 +16,7 @@ package com.code.fauch.hedwig;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
@@ -32,17 +33,29 @@ import java.nio.file.Paths;
 public final class MainTest {
 
     /**
+     * Example to transfers a source file on the local host to the destination file on the remote host.
+     * 
      * @param args
      * @throws IOException 
      * @throws TFTPException 
      */
     public static void main(String[] args) throws IOException, TFTPException {
-        final Path file = Paths.get(args[0]);
-        System.out.println("Sending " + file + " ...");
+        final String action = args[0];
+        final Path file = Paths.get(args[1]);
         try (DatagramSocket socket = new MulticastSocket()){
             socket.setSoTimeout(10);
-            try(InputStream input = Files.newInputStream(file)) {
-                new TFTP(socket).write(InetAddress.getLocalHost(), 69, input, "file.txt", "octet", Option.blksize(8), Option.timeout(10));
+            if (action.equals("put")) {
+                System.out.println("Sending " + file + " ...");
+                try(InputStream input = Files.newInputStream(file)) {
+                    new TFTP(socket).put(InetAddress.getLocalHost(), 69, input, "file.txt", "octet", Option.blksize(8), Option.timeout(10));
+                }
+            } else if (action.equals("get")) {
+                System.out.println("Reading " + file + " ...");
+                try(OutputStream output = Files.newOutputStream(file)) {
+                    new TFTP(socket).get(InetAddress.getLocalHost(), 69, output, "file.txt", "octet", Option.blksize(8), Option.timeout(10));
+                }
+            } else {
+                throw new IllegalArgumentException("unknown action:" + action);
             }
         }
     }
