@@ -90,6 +90,19 @@ public final class TFTP {
         }
     }
     
+    /**
+     * Get a file.
+     * 
+     * @param host host the destination host
+     * @param port the destination port
+     * @param output the output stream open on the local file to write
+     * @param fileName the name of the remote file to download
+     * @param mode the send mode: "octet", "netascii", "mail"
+     * @param options options: "blksize", "timeout", "tsize"
+     * @throws UnsupportedEncodingException
+     * @throws IOException
+     * @throws TFTPException
+     */
     public void get(final InetAddress host, final int port, final OutputStream output, final String fileName, 
             final String mode, final Option... options) throws UnsupportedEncodingException, IOException, TFTPException {
         DatagramPacket rcvpacket = new DatagramPacket(new byte[DATA_SIZE + 4], DATA_SIZE + 4);
